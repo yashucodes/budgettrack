@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { getExpenses } from "../api";
 
 function Dashboard() {
   const balance = 5000;

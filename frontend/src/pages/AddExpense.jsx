@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { addExpense, getExpenses } from "../api";
 
 function AddExpense() {
   const [transactions, setTransactions] = useState([]);
@@ -7,28 +8,57 @@ function AddExpense() {
   const [amount, setAmount] = useState("");
   const [type, setType] = useState("income");
 
-  const handleAddTransaction = (e) => {
+  // Fetch existing transactions when component mounts
+  useEffect(() => {
+    loadTransactions();
+  }, []);
+
+  // Function to load transactions from backend
+  const loadTransactions = async () => {
+    try {
+      const response = await getExpenses();
+      setTransactions(response.data);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+      alert('Failed to load transactions');
+    }
+  };
+
+  const handleAddTransaction = async (e) => {
     e.preventDefault();
     if (!title || !amount) return;
 
-    const newTransaction = {
-      id: Date.now(),
-      title,
-      amount: parseFloat(amount),
-      type,
-    };
+    try {
+      const newTransaction = {
+        category: title,
+        amount: type === 'expense' ? parseFloat(amount) : -parseFloat(amount),
+        note: `${type} transaction`,
+        date: new Date().toISOString()
+      };
 
-    setTransactions([...transactions, newTransaction]);
-    setTitle("");
-    setAmount("");
-    setType("income");
+      // Send to backend
+      await addExpense(newTransaction);
+      
+      // Update local state
+      setTransactions([...transactions, { ...newTransaction, id: Date.now() }]);
+      
+      // Clear form
+      setTitle("");
+      setAmount("");
+      setType("income");
+      
+      alert('Transaction added successfully!');
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      alert('Failed to add transaction. Please try again.');
+    }
   };
 
-  // Separate income and expense
-  const incomeTransactions = transactions.filter(t => t.type === "income");
-  const expenseTransactions = transactions.filter(t => t.type === "expense");
+  // Separate income and expense (negative amounts are income)
+  const incomeTransactions = transactions.filter(t => t.amount < 0);
+  const expenseTransactions = transactions.filter(t => t.amount > 0);
 
-  const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = Math.abs(incomeTransactions.reduce((sum, t) => sum + t.amount, 0));
   const totalExpense = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
 
   return (
@@ -87,9 +117,9 @@ function AddExpense() {
             </thead>
             <tbody>
               {incomeTransactions.map((t) => (
-                <tr key={t.id} className="hover:bg-green-50">
-                  <td className="px-4 py-2">{t.title}</td>
-                  <td className="px-4 py-2">₹{t.amount}</td>
+                <tr key={t._id} className="hover:bg-green-50">
+                  <td className="px-4 py-2">{t.category}</td>
+                  <td className="px-4 py-2">₹{Math.abs(t.amount)}</td>
                 </tr>
               ))}
               <tr className="font-bold bg-green-200">
@@ -106,14 +136,14 @@ function AddExpense() {
           <table className="w-full border border-gray-200 rounded overflow-hidden">
             <thead className="bg-red-100">
               <tr>
-                <th className="px-4 py-2">Title</th>
+                <th className="px-4 py-2">Category</th>
                 <th className="px-4 py-2">Amount (₹)</th>
               </tr>
             </thead>
             <tbody>
               {expenseTransactions.map((t) => (
-                <tr key={t.id} className="hover:bg-red-50">
-                  <td className="px-4 py-2">{t.title}</td>
+                <tr key={t._id} className="hover:bg-red-50">
+                  <td className="px-4 py-2">{t.category}</td>
                   <td className="px-4 py-2">₹{t.amount}</td>
                 </tr>
               ))}
