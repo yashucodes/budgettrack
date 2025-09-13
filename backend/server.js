@@ -199,3 +199,4 @@ process.on('SIGINT', () => {
       });
   });
 });
+app.use("/api/notes", require("./routes/note")); // Route for notes CRUD
