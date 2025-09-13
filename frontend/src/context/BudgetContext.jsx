@@ -1,5 +1,5 @@
 import React, { createContext, useState, useMemo, useEffect } from "react";
-import { getExpenses, addExpense } from "../api"; // ✅ import backend API calls
+import { getExpenses, addExpense } from "../api"; // your backend API calls
 
 export const BudgetContext = createContext();
 
@@ -7,13 +7,13 @@ export const BudgetProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
   const [goals, setGoals] = useState([]);
   const [budget, setBudget] = useState(0);
+  const [notes, setNotes] = useState([]); // added notes state
 
-  // ✅ Load transactions from backend on mount
+  // Load transactions from backend
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await getExpenses();
-        // backend returns array of expenses
         setTransactions(
           res.data.map((exp) => ({
             id: exp._id,
@@ -27,15 +27,9 @@ export const BudgetProvider = ({ children }) => {
         console.error("Error fetching expenses:", err);
       }
     };
-
     fetchData();
   }, []);
 
-  /**
-   * addTransaction supports:
-   *  - addTransaction({ title, amount, type, date, id })
-   *  - addTransaction(title, amount, type)
-   */
   const addTransaction = async (arg1, arg2, arg3) => {
     let newTransaction;
 
@@ -62,11 +56,8 @@ export const BudgetProvider = ({ children }) => {
     }
 
     try {
-      // ✅ Save to backend
       const res = await addExpense(newTransaction);
       const saved = res.data;
-
-      // ✅ Use backend _id
       setTransactions((prev) => [
         {
           id: saved._id,
@@ -79,7 +70,6 @@ export const BudgetProvider = ({ children }) => {
       ]);
     } catch (err) {
       console.error("Error adding expense:", err);
-      // fallback: still add locally
       setTransactions((prev) => [newTransaction, ...prev]);
     }
   };
@@ -88,6 +78,15 @@ export const BudgetProvider = ({ children }) => {
     if (!name || !target) return;
     const g = { id: Date.now(), name, target: Number(target), progress: 0 };
     setGoals((prev) => [g, ...prev]);
+  };
+
+  // Quick Notes functions
+  const addNote = (note) => {
+    setNotes((prev) => [note, ...prev]);
+  };
+
+  const deleteNote = (id) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
   };
 
   // totals
@@ -129,6 +128,9 @@ export const BudgetProvider = ({ children }) => {
         setBudget,
         goals: updatedGoals,
         addGoal,
+        notes,        // added notes to context
+        addNote,      // add note function
+        deleteNote,   // delete note function
       }}
     >
       {children}
