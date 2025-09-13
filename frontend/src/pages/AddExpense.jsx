@@ -2,145 +2,118 @@ import React, { useState, useContext } from "react";
 import { BudgetContext } from "../context/BudgetContext";
 import { Link } from "react-router-dom";
 
-function AddExpense() {
-  const { transactions, addTransaction } = useContext(BudgetContext);
+const AddExpense = () => {
+  const { transactions, addTransaction, deleteTransaction, editTransaction } = useContext(BudgetContext);
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [type, setType] = useState("expense");
+  const [editingId, setEditingId] = useState(null);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!title || !amount) return;
 
-    const numericAmount = Math.abs(Number(amount));
-    if (isNaN(numericAmount) || numericAmount <= 0) return;
+    if (!title.trim() || !amount) return alert("Please fill in all fields");
 
-    try {
-      await addTransaction({
-        title,
-        amount: numericAmount,
-        type,
-        date: new Date()
-      });
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) return alert("Enter valid positive amount");
 
-      // Clear form
-      setTitle("");
-      setAmount("");
-      setType("expense");
-    } catch (error) {
-      console.error("Failed to add transaction:", error);
-      alert("Failed to add transaction. Please try again.");
+    const transaction = {
+      title: title.trim(),
+      amount: numAmount,
+      type,
+      date: new Date().toISOString()
+    };
+
+    if (editingId) {
+      editTransaction(editingId, transaction);
+      setEditingId(null);
+    } else {
+      addTransaction(transaction);
     }
+
+    setTitle("");
+    setAmount("");
+    setType("expense");
+  };
+
+  const handleEdit = (t) => {
+    setTitle(t.title);
+    setAmount(t.amount);
+    setType(t.type);
+    setEditingId(t._id); // <-- use _id from MongoDB
   };
 
   return (
     <div className="p-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Add Transaction</h1>
-          <Link to="/">
-            <button className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-              Back to Dashboard
-            </button>
-          </Link>
-        </div>
+      <Link to="/">
+        <button className="bg-gray-300 px-3 py-1 rounded mb-4 hover:bg-gray-400 text-sm">
+          ← Back
+        </button>
+      </Link>
 
-        <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
-              Title/Category
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="title"
-              type="text"
-              placeholder="e.g., Groceries"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-          </div>
+      <h1 className="text-xl font-bold mb-4">{editingId ? "Edit Transaction" : "Add Transaction"}</h1>
 
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="amount">
-              Amount (₹)
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="amount"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2 mb-6">
+        <input
+          type="number"
+          placeholder="Amount"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="border p-2 rounded w-32 text-sm"
+          required
+          min="0.01"
+          step="0.01"
+        />
+        <input
+          type="text"
+          placeholder="Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="border p-2 rounded flex-1 text-sm"
+          required
+        />
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="border p-2 rounded text-sm"
+        >
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm"
+        >
+          {editingId ? "Update" : "Add"}
+        </button>
+      </form>
 
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="type">
-              Type
-            </label>
-            <select
-              className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="type"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-            >
-              <option value="expense">Expense</option>
-              <option value="income">Income</option>
-            </select>
+      <div>
+        {transactions.length === 0 && <p>No transactions yet.</p>}
+        {transactions.map((t) => (
+          <div key={t._id} className="flex justify-between items-center border p-2 mb-2 rounded">
+            <div>
+              <span className="font-semibold">{t.title}</span> - ${Number(t.amount).toFixed(2)} ({t.type})
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleEdit(t)}
+                className="bg-yellow-400 px-2 py-1 rounded text-xs hover:bg-yellow-500"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => deleteTransaction(t._id)}
+                className="bg-red-500 px-2 py-1 rounded text-xs text-white hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
           </div>
-
-          <div className="flex items-center justify-between">
-            <button
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              type="submit"
-            >
-              Add Transaction
-            </button>
-          </div>
-        </form>
-
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">Recent Transactions</h2>
-          <div className="bg-white shadow-md rounded overflow-hidden">
-            <table className="min-w-full">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-4 py-2 text-left">Title</th>
-                  <th className="px-4 py-2 text-left">Amount</th>
-                  <th className="px-4 py-2 text-left">Type</th>
-                  <th className="px-4 py-2 text-left">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.slice(0, 5).map((t) => (
-                  <tr key={t.id} className="border-t">
-                    <td className="px-4 py-2">{t.title}</td>
-                    <td className="px-4 py-2">₹{t.amount}</td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`inline-block px-2 py-1 rounded text-sm ${
-                          t.type === "income"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {t.type}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">{new Date(t.date).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
-}
+};
 
 export default AddExpense;

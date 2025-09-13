@@ -28,7 +28,8 @@ const app = express();
 // Middleware
 // ----------------------
 app.use(cors());           // Enable cross-origin requests
-app.use(express.json());   // Parse incoming JSON bodies automatically
+app.use(express.json()); 
+  // Parse incoming JSON bodies automatically
 // Protects against common HTTP vulnerabilities
 const helmet = require("helmet");
 app.use(helmet());
@@ -157,16 +158,11 @@ process.on('uncaughtException', (err) => {
 // ----------------------
 const PORT = process.env.PORT || 5000;
 
-// Log any uncaught errors
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-});
+// Keep the process alive
+const keepAlive = () => {
+  setInterval(() => {}, 1000);
+};
 
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err);
-});
-
-// Create HTTP server
 const server = app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log('Available endpoints:');
@@ -174,14 +170,11 @@ const server = app.listen(PORT, () => {
   console.log('- GET  /api/expenses    (List expenses)');
   console.log('- GET  /api/insights    (Get spending insights)');
   console.log('- POST /api/ai-summary  (Get AI analysis)');
-  console.log('- GET  /api/goals       (List goals)');
-  console.log('- POST /api/goals       (Create goal)');
+  keepAlive();
 });
 
-// Keep the process alive
-setInterval(() => {
-  console.log('Server is running...');
-}, 10000);
+// Prevent premature shutdown
+process.stdin.resume();
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {

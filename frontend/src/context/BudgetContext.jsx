@@ -1,136 +1,57 @@
-import React, { createContext, useState, useMemo, useEffect } from "react";
-import { getExpenses, addExpense } from "../api"; // ✅ import backend API calls
+// src/context/BudgetContext.js
+import React, { createContext, useState, useEffect } from "react";
+import axios from "axios";
 
 export const BudgetContext = createContext();
 
+const API_URL = "http://localhost:5000/api/transactions";
+
 export const BudgetProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
-  const [goals, setGoals] = useState([]);
-  const [budget, setBudget] = useState(0);
 
-  // ✅ Load transactions from backend on mount
+  // Fetch all transactions from backend on load
+  const fetchTransactions = async () => {
+    try {
+      const res = await axios.get(API_URL);
+      setTransactions(res.data);
+    } catch (err) {
+      console.error("Failed to fetch transactions:", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await getExpenses();
-        // backend returns array of expenses
-        setTransactions(
-          res.data.map((exp) => ({
-            id: exp._id,
-            title: exp.title || exp.category || "",
-            amount: Number(exp.amount),
-            type: exp.type || "expense",
-            date: exp.date || new Date().toLocaleString(),
-          }))
-        );
-      } catch (err) {
-        console.error("Error fetching expenses:", err);
-      }
-    };
-
-    fetchData();
+    fetchTransactions();
   }, []);
 
-  /**
-   * addTransaction supports:
-   *  - addTransaction({ title, amount, type, date, id })
-   *  - addTransaction(title, amount, type)
-   */
-  const addTransaction = async (arg1, arg2, arg3) => {
-    let newTransaction;
-
-    if (typeof arg1 === "object" && arg1 !== null && "amount" in arg1) {
-      newTransaction = {
-        id: arg1.id || Date.now(),
-        title: arg1.title || arg1.category || "",
-        amount: Number(arg1.amount),
-        type: arg1.type || "expense",
-        date: arg1.date || new Date().toLocaleString(),
-      };
-    } else {
-      const title = arg1 || "";
-      const amount = Number(arg2);
-      const type = arg3 || "expense";
-      if (isNaN(amount) || amount <= 0) return;
-      newTransaction = {
-        id: Date.now(),
-        title,
-        amount,
-        type,
-        date: new Date().toLocaleString(),
-      };
-    }
-
+  const addTransaction = async (transaction) => {
     try {
-      // ✅ Save to backend
-      const res = await addExpense(newTransaction);
-      const saved = res.data;
-
-      // ✅ Use backend _id
-      setTransactions((prev) => [
-        {
-          id: saved._id,
-          title: saved.title,
-          amount: Number(saved.amount),
-          type: saved.type,
-          date: saved.date || new Date().toLocaleString(),
-        },
-        ...prev,
-      ]);
+      const res = await axios.post(API_URL, transaction);
+      setTransactions(prev => [...prev, res.data]);
     } catch (err) {
-      console.error("Error adding expense:", err);
-      // fallback: still add locally
-      setTransactions((prev) => [newTransaction, ...prev]);
+      console.error("Failed to add transaction:", err);
     }
   };
 
-  const addGoal = (name, target) => {
-    if (!name || !target) return;
-    const g = { id: Date.now(), name, target: Number(target), progress: 0 };
-    setGoals((prev) => [g, ...prev]);
+  const deleteTransaction = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/${id}`);
+      setTransactions(prev => prev.filter(t => t._id !== id));
+    } catch (err) {
+      console.error("Failed to delete transaction:", err);
+    }
   };
 
-  // totals
-  const totalIncome = useMemo(
-    () =>
-      transactions
-        .filter((t) => t.type === "income")
-        .reduce((s, t) => s + Number(t.amount), 0),
-    [transactions]
-  );
-
-  const totalExpense = useMemo(
-    () =>
-      transactions
-        .filter((t) => t.type === "expense")
-        .reduce((s, t) => s + Number(t.amount), 0),
-    [transactions]
-  );
-
-  const moneyLeft = Math.max(budget + totalIncome - totalExpense, 0);
-
-  const updatedGoals = goals.map((g) => ({
-    ...g,
-    progress: Math.min(
-      100,
-      Math.round(((totalIncome - totalExpense) / (g.target || 1)) * 100)
-    ),
-  }));
+  const editTransaction = async (id, updatedTransaction) => {
+    try {
+      const res = await axios.put(`${API_URL}/${id}`, updatedTransaction);
+      setTransactions(prev => prev.map(t => (t._id === id ? res.data : t)));
+    } catch (err) {
+      console.error("Failed to update transaction:", err);
+    }
+  };
 
   return (
-    <BudgetContext.Provider
-      value={{
-        transactions,
-        addTransaction,
-        totalIncome,
-        totalExpense,
-        moneyLeft,
-        budget,
-        setBudget,
-        goals: updatedGoals,
-        addGoal,
-      }}
-    >
+    <BudgetContext.Provider value={{ transactions, addTransaction, deleteTransaction, editTransaction }}>
       {children}
     </BudgetContext.Provider>
   );
