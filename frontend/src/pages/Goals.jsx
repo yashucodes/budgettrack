@@ -1,71 +1,121 @@
-import React, { useContext, useState } from "react";
+import React, { useContext } from "react";
 import { BudgetContext } from "../context/BudgetContext";
 import { Link } from "react-router-dom";
+import { PieChart, Pie, Cell, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 
-function Goals() {
-  const { goals, addGoal } = useContext(BudgetContext);
-  const [name, setName] = useState("");
-  const [target, setTarget] = useState("");
+function Dashboard() {
+  const { transactions, moneyLeft } = useContext(BudgetContext);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!name || !target) return;
-    addGoal(name, target);
-    setName("");
-    setTarget("");
-  };
+  const income = transactions
+    .filter(t => t.type === "income")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const expense = transactions
+    .filter(t => t.type === "expense")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  // Group expenses by category/title for Pie Chart
+  const expenseData = [];
+  transactions.forEach((t) => {
+    if (t.type === "expense") {
+      const existing = expenseData.find((e) => e.name === t.title);
+      if (existing) {
+        existing.value += Number(t.amount);
+      } else {
+        expenseData.push({ name: t.title, value: Number(t.amount) });
+      }
+    }
+  });
+
+  // Line chart data (date vs amount spent)
+  const lineData = transactions.map((t) => ({
+    date: t.date,
+    expense: t.type === "expense" ? Number(t.amount) : 0,
+    income: t.type === "income" ? Number(t.amount) : 0,
+  }));
+
+  const COLORS = ["#FF8042", "#00C49F", "#0088FE", "#FFBB28", "#AA336A"];
 
   return (
     <div className="p-6">
-      <Link to="/">
-        <button className="bg-gray-300 px-4 py-2 rounded mb-4 hover:bg-gray-400">
-          ← Back to Dashboard
-        </button>
-      </Link>
+      <h1 className="text-3xl font-bold mb-6">📊 Dashboard</h1>
 
-      <h1 className="text-2xl font-bold mb-4">Set Your Goal</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2 mb-6">
-        <input
-          type="text"
-          placeholder="Goal Name (e.g., Trip)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="border p-2 rounded flex-1"
-        />
-        <input
-          type="number"
-          placeholder="Target Amount"
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          className="border p-2 rounded w-32"
-        />
-        <button
-          type="submit"
-          className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
-        >
-          Add Goal
-        </button>
-      </form>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-green-100 p-4 rounded shadow text-center">
+          <h2 className="text-lg font-semibold">Income</h2>
+          <p className="text-2xl font-bold text-green-700">₹{income}</p>
+        </div>
+        <div className="bg-red-100 p-4 rounded shadow text-center">
+          <h2 className="text-lg font-semibold">Expense</h2>
+          <p className="text-2xl font-bold text-red-700">₹{expense}</p>
+        </div>
+        <div className="bg-blue-100 p-4 rounded shadow text-center">
+          <h2 className="text-lg font-semibold">Balance</h2>
+          <p className="text-2xl font-bold text-blue-700">₹{moneyLeft}</p>
+        </div>
+        <div className="bg-yellow-100 p-4 rounded shadow text-center">
+          <h2 className="text-lg font-semibold">Goal Progress</h2>
+          <p className="text-xl text-yellow-700">Coming Soon 🎯</p>
+        </div>
+      </div>
 
-      {goals.length === 0 ? (
-        <p>No goals yet</p>
-      ) : (
-        goals.map((g) => (
-          <div key={g.id} className="mb-4">
-            <p className="font-semibold">{g.name}</p>
-            <div className="bg-gray-200 w-full h-4 rounded">
-              <div
-                className="bg-purple-500 h-4 rounded text-white text-xs text-center"
-                style={{ width: `${g.progress}%` }}
+      {/* Graphs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Pie Chart for Spending */}
+        <div className="bg-white shadow rounded p-4">
+          <h2 className="text-xl font-bold mb-4">Spending by Category</h2>
+          {expenseData.length > 0 ? (
+            <PieChart width={300} height={300}>
+              <Pie
+                data={expenseData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
               >
-                {g.progress}%
-              </div>
-            </div>
-          </div>
-        ))
-      )}
+                {expenseData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          ) : (
+            <p className="text-gray-500">No expenses yet.</p>
+          )}
+        </div>
+
+        {/* Line Chart for Spending Trend */}
+        <div className="bg-white shadow rounded p-4">
+          <h2 className="text-xl font-bold mb-4">Spending Trend</h2>
+          {lineData.length > 0 ? (
+            <LineChart width={400} height={300} data={lineData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="expense" stroke="#FF0000" />
+              <Line type="monotone" dataKey="income" stroke="#00C49F" />
+            </LineChart>
+          ) : (
+            <p className="text-gray-500">No transactions yet.</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <Link to="/add">
+          <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            + Add Transaction
+          </button>
+        </Link>
+      </div>
     </div>
   );
 }
 
-export default Goals;
+export default Dashboard;
