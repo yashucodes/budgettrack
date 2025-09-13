@@ -1,6 +1,7 @@
 import React, { useContext, useState } from "react";
 import { BudgetContext } from "../context/BudgetContext";
 import { Link } from "react-router-dom";
+import { addExpense } from "../api";
 
 function AddExpense() {
   const { transactions, addTransaction, moneyLeft } = useContext(BudgetContext);
@@ -8,35 +9,40 @@ function AddExpense() {
   const [amount, setAmount] = useState("");
   const [type, setType] = useState("income");
 
-  // filter by type (we store positive amounts and use `type` to separate)
   const incomeTransactions = transactions.filter((t) => t.type === "income");
   const expenseTransactions = transactions.filter((t) => t.type === "expense");
 
   const totalIncome = incomeTransactions.reduce((s, t) => s + Number(t.amount), 0);
   const totalExpense = expenseTransactions.reduce((s, t) => s + Number(t.amount), 0);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // normalize and validate amount (no negatives allowed)
     const numericAmount = Math.abs(Number(amount));
     if (!title || isNaN(numericAmount) || numericAmount <= 0) return;
 
+    // Prepare expense object
     const tx = {
-      id: Date.now(),
       title: title.trim(),
       amount: numericAmount,
       type,
-      date: new Date().toLocaleString(),
+      date: new Date(),
     };
 
-    // addTransaction accepts a transaction object (also supports (title, amount, type))
-    addTransaction(tx);
+    try {
+      // Save to MongoDB via backend
+      const res = await addExpense(tx);
 
-    // reset
-    setTitle("");
-    setAmount("");
-    setType("income");
+      // Update local context state
+      addTransaction(res.data);
+
+      // Reset form
+      setTitle("");
+      setAmount("");
+      setType("income");
+    } catch (err) {
+      console.error("Error saving expense:", err);
+    }
   };
 
   return (
@@ -72,16 +78,18 @@ function AddExpense() {
           <option value="income">Income</option>
           <option value="expense">Expense</option>
         </select>
-        <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
+        >
           Add
         </button>
       </form>
 
       <div className="mb-4 text-lg font-semibold">💵 Money Left: ₹{moneyLeft}</div>
 
-      {/* Split compact tables (Amount before Title, includes Date & Time) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Income */}
+        {/* Income Table */}
         <div>
           <h2 className="text-lg font-bold mb-2 text-green-700">Income</h2>
           <table className="w-full border border-gray-200 rounded text-sm">
@@ -99,10 +107,12 @@ function AddExpense() {
                 </tr>
               ) : (
                 incomeTransactions.map((t) => (
-                  <tr key={t.id} className="hover:bg-green-50">
+                  <tr key={t._id || t.id} className="hover:bg-green-50">
                     <td className="px-2 py-1 font-medium">₹{t.amount}</td>
                     <td className="px-2 py-1">{t.title}</td>
-                    <td className="px-2 py-1">{t.date}</td>
+                    <td className="px-2 py-1">
+                      {new Date(t.date).toLocaleString()}
+                    </td>
                   </tr>
                 ))
               )}
@@ -115,7 +125,7 @@ function AddExpense() {
           </table>
         </div>
 
-        {/* Expense */}
+        {/* Expense Table */}
         <div>
           <h2 className="text-lg font-bold mb-2 text-red-700">Expense</h2>
           <table className="w-full border border-gray-200 rounded text-sm">
@@ -133,10 +143,12 @@ function AddExpense() {
                 </tr>
               ) : (
                 expenseTransactions.map((t) => (
-                  <tr key={t.id} className="hover:bg-red-50">
+                  <tr key={t._id || t.id} className="hover:bg-red-50">
                     <td className="px-2 py-1 font-medium">₹{t.amount}</td>
                     <td className="px-2 py-1">{t.title}</td>
-                    <td className="px-2 py-1">{t.date}</td>
+                    <td className="px-2 py-1">
+                      {new Date(t.date).toLocaleString()}
+                    </td>
                   </tr>
                 ))
               )}

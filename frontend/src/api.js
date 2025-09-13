@@ -1,4 +1,3 @@
-// src/api.js
 import axios from "axios";
 
 const BASE_URL = "http://localhost:5000/api";
@@ -10,10 +9,9 @@ export const getExpenses = () => axios.get(`${BASE_URL}/expenses`);
 export const addExpense = (expense) => axios.post(`${BASE_URL}/expenses`, expense);
 
 // Get insights
-export const getInsights = (from, to) => 
+export const getInsights = (from, to) =>
   axios.get(`${BASE_URL}/insights`, { params: { from, to } });
 
 // Call OpenAI summary
-export const getAISummary = (prompt) => 
+export const getAISummary = (prompt) =>
   axios.post(`${BASE_URL}/ai-summary`, { prompt });
-

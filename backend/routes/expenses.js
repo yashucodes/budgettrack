@@ -1,52 +1,28 @@
-// Import Express framework
-const express = require('express');
-
-// Create a router object to define routes for expenses
+const express = require("express");
 const router = express.Router();
+const Expense = require("../models/Expense");
 
-// Import the Expense model to interact with the MongoDB collection
-const Expense = require('../models/Expense');
-
-// ----------------------
-// Route: Create a new expense
-// ----------------------
-router.post('/', async (req, res) => {
+// CREATE new expense
+router.post("/", async (req, res) => {
   try {
-    // Extract data sent by the client (frontend) in the request body
-    const { amount, category, note, date } = req.body;
-
-    // Create a new Expense document using the data
-    const e = new Expense({ amount, category, note, date });
-
-    // Save the expense to MongoDB
-    await e.save();
-
-    // Send back the saved expense as JSON
-    res.json(e);
-
+    const expense = new Expense(req.body);
+    const saved = await expense.save();
+    res.json(saved);
   } catch (err) {
-    // If something goes wrong, return an error with status 500
-    res.status(500).json({ error: 'create failed' });
+    console.error("Error saving expense:", err);
+    res.status(500).json({ error: "Failed to save expense" });
   }
 });
 
-// ----------------------
-// Route: Get all expenses
-// Method: GET /api/expenses
-// ----------------------
-router.get('/', async (req, res) => {
+// READ all expenses
+router.get("/", async (req, res) => {
   try {
-    // Fetch expenses from MongoDB, sorted by newest first, limit to 100
-    const expenses = await Expense.find().sort({ date: -1 }).limit(100);
-
-    // Send the list of expenses back to the client
+    const expenses = await Expense.find().sort({ date: -1 });
     res.json(expenses);
-
   } catch (err) {
-    // Return error if fetching fails
-    res.status(500).json({ error: 'fetch failed' });
+    console.error("Error fetching expenses:", err);
+    res.status(500).json({ error: "Failed to fetch expenses" });
   }
 });
 
-// Export the router so server.js can use these routes
 module.exports = router;
