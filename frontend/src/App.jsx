@@ -18,6 +18,8 @@ function App() {
         </nav>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/add-expense" element={<AddExpense />} />
           <Route path="/add-expense" element={<AddExpense />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/insights" element={<Insight />} /> {/* updated path */}
