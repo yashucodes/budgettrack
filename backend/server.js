@@ -1,54 +1,74 @@
-// Load environment variables from .env file (like your MongoDB connection string)
+// ----------------------
+// Load environment variables
+// ----------------------
+// This allows us to use sensitive info like MongoDB URI and OpenAI API key
 require('dotenv').config();
 
+// ----------------------
 // Import required libraries
-const express = require('express');   // Web framework for building API/server
-const mongoose = require('mongoose'); // For connecting to MongoDB and defining models
-const cors = require('cors');         // Allows your frontend (React) to talk to this backend
+// ----------------------
+const express = require('express');       // Web framework for API/server
+const mongoose = require('mongoose');     // MongoDB connection and models
+const cors = require('cors');             // Allows frontend to talk to backend
+const OpenAI = require('openai'); // OpenAI SDK
 
-// Create an Express app
+// ----------------------
+// Configure OpenAI
+// ----------------------
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY // Your OpenAI key from .env
+});
+
+// ----------------------
+// Create Express app
+// ----------------------
 const app = express();
 
+// ----------------------
 // Middleware
-app.use(cors());             // Enable CORS so frontend can make requests
-app.use(express.json());     // Automatically parse JSON in request bodies
+// ----------------------
+app.use(cors());           // Enable cross-origin requests
+app.use(express.json());   // Parse incoming JSON bodies automatically
 
 // ----------------------
 // Connect to MongoDB
 // ----------------------
 const uri = process.env.MONGO_URI; // MongoDB connection string stored in .env
-mongoose.connect(uri, { 
-  useNewUrlParser: true,          // Use modern URL parser
-  useUnifiedTopology: true        // Use modern server discovery engine
+mongoose.connect(uri, {
+  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
 })
-  .then(() => console.log('MongoDB connected'))       // Success message
-  .catch(err => console.error('MongoDB error', err)); // Error message if connection fails
+  .then(() => console.log('MongoDB connected successfully'))
+  .catch(err => {
+    console.error('MongoDB connection error:');
+    console.error('Error name:', err.name);
+    console.error('Error message:', err.message);
+    console.error('Full error:', err);
+  });
 
 // ----------------------
 // Load the Expense model
 // ----------------------
-const Expense = require('./models/Expense'); // Represents the "expenses" collection in MongoDB
+const Expense = require('./models/Expense'); // Represents the "expenses" collection
 
 // ----------------------
-// Set up API routes
+// API Routes
 // ----------------------
-app.use('/api/expenses', require('./routes/expenses')); // All /api/expenses requests go to routes/expenses.js
+app.use('/api/expenses', require('./routes/expenses')); // Route for expense CRUD
 
 // ----------------------
 // Insights endpoint
 // ----------------------
-// Example: GET /api/insights?from=2025-01-01&to=2025-09-01
-// Returns total spending and category suggestions
 app.get('/api/insights', async (req, res) => {
   try {
-    // Determine the date range (default: all time)
+    // Determine date range from query params or default to all time
     const from = req.query.from ? new Date(req.query.from) : new Date(0);
     const to = req.query.to ? new Date(req.query.to) : new Date();
 
-    // Get all expenses in the date range
+    // Get all expenses in that date range
     const expenses = await Expense.find({ date: { $gte: from, $lte: to } });
 
-    // Compute totals per category and overall total
+    // Calculate totals
     const totals = {};
     let total = 0;
     expenses.forEach(e => {
@@ -56,30 +76,94 @@ app.get('/api/insights', async (req, res) => {
       total += e.amount;
     });
 
-    // Build simple suggestions/messages based on spending patterns
+    // Build simple suggestions/messages
     const messages = [];
     for (let cat in totals) {
-      const pct = ((totals[cat] / total) * 100).toFixed(0); // Calculate % of total
+      const pct = ((totals[cat] / total) * 100).toFixed(0);
       if (pct > 30) {
         messages.push(`You spent ${pct}% on ${cat} — consider reducing this to save more.`);
       }
     }
-
-    if (messages.length === 0) {
-      messages.push('Spending looks balanced this period.');
-    }
+    if (messages.length === 0) messages.push('Spending looks balanced this period.');
 
     // Send response
     res.json({ total, totals, messages });
 
   } catch (err) {
-    // If something goes wrong, send error message
     res.status(500).json({ error: 'insights error' });
   }
 });
 
 // ----------------------
+//  Example OpenAI endpoint
+// ----------------------
+app.post('/api/ai-summary', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+
+    if (!prompt) return res.status(400).json({ error: 'No prompt provided' });
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 200,
+    });
+
+    res.json({ result: response.choices[0].message.content });
+
+  } catch (err) {
+    console.error('OpenAI error', err);
+    res.status(500).json({ error: 'OpenAI request failed' });
+  }
+});
+
+// ----------------------
+// Error Handling
+// ----------------------
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Promise Rejection:', err);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+// ----------------------
 // Start the server
 // ----------------------
-const PORT = process.env.PORT || 5000;  // Use PORT from .env or default 5000
-app.listen(PORT, () => console.log('Server running on', PORT)); // Confirm server is running
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log('Available endpoints:');
+  console.log('- POST /api/expenses    (Create expense)');
+  console.log('- GET  /api/expenses    (List expenses)');
+  console.log('- GET  /api/insights    (Get spending insights)');
+  console.log('- POST /api/ai-summary  (Get AI analysis)');
+});
+
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    mongoose.connection.close()
+      .then(() => {
+        console.log('MongoDB connection closed');
+        process.exit(0);
+      })
+      .catch(err => {
+        console.error('Error closing MongoDB connection:', err);
+        process.exit(1);
+      });
+  });
+});
+app.get('/', async (req, res) => {
+  try {
+    const count = await Expense.countDocuments(); // Count expenses in MongoDB
+    res.send(`<h1>MongoDB is working!</h1><p>There are ${count} expenses in the database.</p>`);
+  } catch (err) {
+    res.send(`<h1>Error connecting to MongoDB</h1><p>${err.message}</p>`);
+  }
+});
