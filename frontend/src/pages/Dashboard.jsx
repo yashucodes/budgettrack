@@ -1,5 +1,7 @@
 import React, { useContext } from "react";
+import { Link } from "react-router-dom";
 import { BudgetContext } from "../context/BudgetContext";
+import { getExpenses } from "../api";
 
 function Dashboard() {
   const {
