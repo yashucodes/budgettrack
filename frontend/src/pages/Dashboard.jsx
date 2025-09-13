@@ -108,13 +108,14 @@ function Dashboard() {
       </div>
 
       <div className="mt-6">
-        <Link to="/add">
+        <Link to="/add-expense">
           <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
             + Add Transaction
           </button>
         </Link>
       </div>
     </div>
+    
   );
 }
 
