@@ -29,6 +29,9 @@ const app = express();
 // ----------------------
 app.use(cors());           // Enable cross-origin requests
 app.use(express.json());   // Parse incoming JSON bodies automatically
+// Protects against common HTTP vulnerabilities
+const helmet = require("helmet");
+app.use(helmet());
 
 // ----------------------
 // Connect to MongoDB
@@ -55,6 +58,19 @@ const Expense = require('./models/Expense'); // Represents the "expenses" collec
 // API Routes
 // ----------------------
 app.use('/api/expenses', require('./routes/expenses')); // Route for expense CRUD
+app.use("/api/goals", require("./routes/goal")); // Route for goals CRUD
+
+// ----------------------
+// Root route for testing MongoDB connection
+// ----------------------
+app.get('/', async (req, res) => {
+  try {
+    const count = await Expense.countDocuments(); // Count expenses in MongoDB
+    res.send(`<h1>MongoDB is working!</h1><p>There are ${count} expenses in the database.</p>`);
+  } catch (err) {
+    res.send(`<h1>Error connecting to MongoDB</h1><p>${err.message}</p>`);
+  }
+});
 
 // ----------------------
 // Insights endpoint
@@ -122,18 +138,35 @@ app.post('/api/ai-summary', async (req, res) => {
 // ----------------------
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Promise Rejection:', err);
+  console.error('Unhandled Promise Rejection:');
+  console.error('Error name:', err.name);
+  console.error('Error message:', err.message);
+  console.error('Full error:', err);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
+  console.error('Uncaught Exception:');
+  console.error('Error name:', err.name);
+  console.error('Error message:', err.message);
+  console.error('Stack trace:', err.stack);
 });
 
 // ----------------------
 // Start the server
 // ----------------------
 const PORT = process.env.PORT || 5000;
+
+// Log any uncaught errors
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
+});
+
+// Create HTTP server
 const server = app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log('Available endpoints:');
@@ -141,7 +174,14 @@ const server = app.listen(PORT, () => {
   console.log('- GET  /api/expenses    (List expenses)');
   console.log('- GET  /api/insights    (Get spending insights)');
   console.log('- POST /api/ai-summary  (Get AI analysis)');
+  console.log('- GET  /api/goals       (List goals)');
+  console.log('- POST /api/goals       (Create goal)');
 });
+
+// Keep the process alive
+setInterval(() => {
+  console.log('Server is running...');
+}, 10000);
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
@@ -158,12 +198,4 @@ process.on('SIGINT', () => {
         process.exit(1);
       });
   });
-});
-app.get('/', async (req, res) => {
-  try {
-    const count = await Expense.countDocuments(); // Count expenses in MongoDB
-    res.send(`<h1>MongoDB is working!</h1><p>There are ${count} expenses in the database.</p>`);
-  } catch (err) {
-    res.send(`<h1>Error connecting to MongoDB</h1><p>${err.message}</p>`);
-  }
 });

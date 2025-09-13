@@ -1,7 +1,10 @@
 import React, { useContext } from "react";
 import { BudgetContext } from "../context/BudgetContext";
 import { Link } from "react-router-dom";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid
+} from "recharts";
 
 function Insight() {
   const { transactions } = useContext(BudgetContext);
@@ -28,54 +31,118 @@ function Insight() {
   const pieData = Object.keys(expenseByCategory).map((cat) => ({
     name: cat,
     value: expenseByCategory[cat],
+    percent: ((expenseByCategory[cat] / expense) * 100).toFixed(1),
   }));
 
-  const COLORS = ["#f87171", "#facc15", "#34d399", "#60a5fa", "#a78bfa"];
+  // Sort categories by spending (descending) for bar chart
+  const sortedCategories = [...pieData].sort((a, b) => b.value - a.value);
+
+  const COLORS = ["#3B82F6", "#06B6D4", "#F97316", "#EF4444", "#22C55E", "#A855F7"];
+
+  // AI-style insights
+  const biggestCategory = sortedCategories[0]?.name || "N/A";
+  const biggestSpend = sortedCategories[0]?.value || 0;
+  const savingRate = income > 0 ? ((balance / income) * 100).toFixed(1) : 0;
+  const monthlyBurn = expense > 0 ? expense / 30 : 0;
+  const daysLeft = balance > 0 && monthlyBurn > 0 ? Math.floor(balance / monthlyBurn) : 0;
 
   return (
-    <div className="p-6">
+    <div className="p-6 min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
       <Link to="/">
-        <button className="bg-gray-300 px-4 py-2 rounded mb-4 hover:bg-gray-400">
+        <button className="bg-blue-600 px-4 py-2 rounded mb-4 hover:bg-blue-700">
           ← Back to Dashboard
         </button>
       </Link>
 
-      <h1 className="text-3xl font-bold mb-6">💡 AI Insights</h1>
+      <h1 className="text-4xl font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">
+        💡 Smart AI Insights
+      </h1>
 
       {/* Summary */}
-      <div className="bg-white shadow rounded-2xl p-6 mb-6">
-        <p>💰 Income: <b className="text-green-700">₹{income}</b></p>
-        <p>📉 Expense: <b className="text-red-700">₹{expense}</b></p>
-        <p>🏦 Balance: <b>{balance >= 0 ? `₹${balance}` : "⚠️ Negative Balance"}</b></p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="backdrop-blur bg-white/10 p-6 rounded-2xl shadow">
+          <p>💰 Income</p>
+          <p className="text-2xl font-bold text-green-400">₹{income}</p>
+        </div>
+        <div className="backdrop-blur bg-white/10 p-6 rounded-2xl shadow">
+          <p>📉 Expense</p>
+          <p className="text-2xl font-bold text-red-400">₹{expense}</p>
+        </div>
+        <div className="backdrop-blur bg-white/10 p-6 rounded-2xl shadow">
+          <p>🏦 Balance</p>
+          <p className={`text-2xl font-bold ${balance >= 0 ? "text-cyan-400" : "text-red-500"}`}>
+            {balance >= 0 ? `₹${balance}` : "⚠ Negative"}
+          </p>
+        </div>
       </div>
 
       {/* AI Tips */}
-      <div className="bg-blue-50 shadow rounded-2xl p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">AI Tips</h2>
-        {expense > income ? (
-          <p className="text-red-700">⚠️ You are overspending! Try cutting expenses.</p>
-        ) : (
-          <p className="text-green-700">✅ Great job! You are saving more than you spend.</p>
-        )}
-        {balance < 1000 && (
-          <p className="text-red-600">⚠️ Warning: Your balance is running low!</p>
-        )}
+      <div className="bg-indigo-900/40 border border-indigo-700/40 p-6 rounded-2xl shadow mb-10">
+        <h2 className="text-xl font-semibold mb-4">🔮 AI Financial Tips</h2>
+        <ul className="space-y-2">
+          {expense > income && (
+            <li className="text-red-400">⚠️ You are overspending! Reduce expenses immediately.</li>
+          )}
+          {balance < 1000 && (
+            <li className="text-yellow-400">⚠️ Balance is very low — limit spending this week.</li>
+          )}
+          {biggestSpend > 0 && (
+            <li className="text-blue-300">
+              💡 Most of your money goes to <b>{biggestCategory}</b> (₹{biggestSpend}). 
+              Cutting this by 20% saves you ₹{(0.2 * biggestSpend).toFixed(0)} per month.
+            </li>
+          )}
+          <li className="text-green-300">
+            📊 Your saving rate is {savingRate}% — aim for at least 20%.
+          </li>
+          {daysLeft > 0 && (
+            <li className="text-cyan-300">
+              ⏳ At current pace, your balance will last about {daysLeft} days.
+            </li>
+          )}
+        </ul>
       </div>
 
-      {/* Pie Chart */}
-      <div className="bg-white shadow rounded-2xl p-6">
-        <h2 className="text-xl font-semibold mb-4">Where Your Money Goes</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={120} label>
-              {pieData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Donut Chart */}
+        <div className="bg-slate-900/60 p-6 rounded-2xl shadow">
+          <h2 className="text-xl font-semibold mb-4 text-blue-300">Spending Breakdown</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={120}
+                label={(entry) => `${entry.name} (${entry.percent}%)`}
+              >
+                {pieData.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ background: "#0f172a", color: "#fff" }} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Bar Chart */}
+        <div className="bg-slate-900/60 p-6 rounded-2xl shadow">
+          <h2 className="text-xl font-semibold mb-4 text-blue-300">Top Spending Categories</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={sortedCategories}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="name" stroke="#E5E7EB" />
+              <YAxis stroke="#E5E7EB" />
+              <Tooltip contentStyle={{ background: "#0f172a", color: "#fff" }} />
+              <Bar dataKey="value" fill="#3B82F6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
