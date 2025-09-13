@@ -1,17 +1,29 @@
 import React, { useContext } from "react";
 import { BudgetContext } from "../context/BudgetContext";
 import { Link } from "react-router-dom";
-import { PieChart, Pie, Cell, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import QuickNotes from "../components/QuickNotes";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid
+} from "recharts";
 
 function Dashboard() {
   const { transactions, moneyLeft } = useContext(BudgetContext);
 
   const income = transactions
-    .filter(t => t.type === "income")
+    .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const expense = transactions
-    .filter(t => t.type === "expense")
+    .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   // Group expenses by category/title for Pie Chart
@@ -29,7 +41,7 @@ function Dashboard() {
 
   // Line chart data (date vs amount spent)
   const lineData = transactions.map((t) => ({
-    date: t.date,
+    date: new Date(t.date).toLocaleDateString(),
     expense: t.type === "expense" ? Number(t.amount) : 0,
     income: t.type === "income" ? Number(t.amount) : 0,
   }));
@@ -77,7 +89,10 @@ function Dashboard() {
                 dataKey="value"
               >
                 {expenseData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
                 ))}
               </Pie>
               <Tooltip />
@@ -108,14 +123,17 @@ function Dashboard() {
       </div>
 
       <div className="mt-6">
-        <Link to="/add">
+        <Link to="/add-expense">
           <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
             + Add Transaction
           </button>
         </Link>
       </div>
+
+      {/* Quick Notes */}
+      <QuickNotes />
     </div>
   );
 }
 
-export default Dashboard; 
+export default Dashboard;
