@@ -53,7 +53,7 @@ mongoose.connect(uri, {
 // Load the Expense model
 // ----------------------
 const Expense = require('./models/Expense'); // Represents the "expenses" collection
-const expenseRoutes = require("./routes/expense");
+const expenseRoutes = require("./routes/expenses");
 app.use("/api/expenses", expenseRoutes);
 
 // ----------------------
