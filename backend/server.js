@@ -59,6 +59,7 @@ const Expense = require('./models/Expense'); // Represents the "expenses" collec
 // ----------------------
 app.use('/api/expenses', require('./routes/expenses')); // Route for expense CRUD
 app.use("/api/goals", require("./routes/goal")); // Route for goals CRUD
+app.use("/api/notes", require("./routes/note")); // Route for notes CRUD
 
 // ----------------------
 // Root route for testing MongoDB connection
@@ -199,4 +200,3 @@ process.on('SIGINT', () => {
       });
   });
 });
-app.use("/api/notes", require("./routes/note")); // Route for notes CRUD
