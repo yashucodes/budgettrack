@@ -16,7 +16,6 @@ function Goals() {
 
   const API_URL = "http://localhost:5000/api/goals";
 
-  // fetch goals on load
   useEffect(() => {
     axios.get(API_URL)
       .then(res => setGoals(res.data))
@@ -26,11 +25,7 @@ function Goals() {
   const addGoal = async () => {
     if (goalName && targetAmount > 0 && deadline) {
       try {
-        const res = await axios.post(API_URL, {
-          name: goalName,
-          target: targetAmount,
-          deadline,
-        });
+        const res = await axios.post(API_URL, { name: goalName, target: targetAmount, deadline });
         setGoals([res.data, ...goals]);
         setGoalName("");
         setTargetAmount("");
@@ -69,26 +64,12 @@ function Goals() {
   };
 
   const saveEdit = async (id) => {
-    if (!editData.name || !editData.target || !editData.deadline) {
-      alert("Please fill all fields before saving.");
-      return;
-    }
-
+    if (!editData.name || !editData.target || !editData.deadline) return alert("Fill all fields.");
     setSaving(true);
     try {
-      const payload = {
-        name: editData.name,
-        target: Number(editData.target),
-        deadline: editData.deadline,
-      };
-
+      const payload = { name: editData.name, target: Number(editData.target), deadline: editData.deadline };
       const res = await axios.put(`${API_URL}/${id}`, payload);
-      const updatedGoal = res.data;
-
-      setGoals((prev) =>
-        prev.map((g) => (g._id === id ? updatedGoal : g))
-      );
-
+      setGoals(goals.map(g => (g._id === id ? res.data : g)));
       setEditingId(null);
       setEditData({ name: "", target: "", deadline: "" });
     } catch (err) {
@@ -108,6 +89,15 @@ function Goals() {
   const expense = transactions.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
   const monthlySaving = income - expense;
 
+  // Tooltip style (for charts if any)
+  const tooltipStyle = {
+    backgroundColor: "rgba(15, 23, 42, 0.9)",
+    border: "1px solid #3B82F6",
+    borderRadius: "8px",
+    color: "#fff",
+    fontSize: "14px",
+  };
+
   return (
     <div className="p-6 min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
       <Link to="/">
@@ -120,23 +110,38 @@ function Goals() {
         🎯 Goals
       </h1>
 
+      {/* AI Insights */}
+      <div className="bg-indigo-900/40 border border-indigo-700/40 p-6 rounded-2xl shadow mb-10">
+        <h2 className="text-xl font-semibold mb-4">🔮 AI Goal Tips</h2>
+        <ul className="space-y-2">
+          <li className="text-green-300">💡 Monthly Saving: ₹{monthlySaving} available for goals.</li>
+          {goals.map(g => {
+            const monthsLeft = Math.max(1, Math.ceil((new Date(g.deadline).getTime() - new Date().getTime()) / (1000*60*60*24*30)));
+            const requiredPerMonth = g.target / monthsLeft;
+            const canAchieve = monthlySaving >= requiredPerMonth;
+            return (
+              <li key={g._id} className={canAchieve ? "text-cyan-300" : "text-red-400"}>
+                {canAchieve ? `✅ You can achieve "${g.name}" on time.` : `⚠️ "${g.name}" might need more savings.`}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
       {/* Goal Form */}
       <div className="backdrop-blur bg-white/10 p-6 rounded-2xl shadow mb-8">
         <h2 className="text-xl font-semibold mb-4">Set a New Goal</h2>
         <div className="flex flex-col md:flex-row gap-4 mb-4">
-          <input type="text" placeholder="Goal Name" value={goalName} onChange={(e) => setGoalName(e.target.value)} className="border p-2 rounded flex-1 bg-slate-800 text-white" />
-          <input type="number" placeholder="Target Amount (₹)" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} className="border p-2 rounded flex-1 bg-slate-800 text-white" />
-          <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="border p-2 rounded flex-1 bg-slate-800 text-white" />
+          <input type="text" placeholder="Goal Name" value={goalName} onChange={e => setGoalName(e.target.value)} className="border p-2 rounded flex-1 bg-slate-800 text-white" />
+          <input type="number" placeholder="Target Amount (₹)" value={targetAmount} onChange={e => setTargetAmount(e.target.value)} className="border p-2 rounded flex-1 bg-slate-800 text-white" />
+          <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} className="border p-2 rounded flex-1 bg-slate-800 text-white" />
         </div>
         <button onClick={addGoal} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">➕ Add Goal</button>
       </div>
 
       {/* Goals List */}
-      {goals.map((goal) => {
-        const monthsLeft = Math.max(
-          1,
-          Math.ceil((new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30))
-        );
+      {goals.map(goal => {
+        const monthsLeft = Math.max(1, Math.ceil((new Date(goal.deadline).getTime() - new Date().getTime()) / (1000*60*60*24*30)));
         const requiredPerMonth = goal.target / monthsLeft;
         const canAchieve = monthlySaving >= requiredPerMonth;
 
@@ -146,18 +151,12 @@ function Goals() {
               <>
                 <h2 className="text-xl font-bold mb-4">✏️ Edit Goal</h2>
                 <div className="flex flex-col md:flex-row gap-4 mb-4">
-                  <input type="text" value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="border p-2 rounded flex-1 bg-slate-800 text-white" />
-                  <input type="number" value={editData.target} onChange={(e) => setEditData({ ...editData, target: e.target.value })} className="border p-2 rounded flex-1 bg-slate-800 text-white" />
-                  <input type="date" value={editData.deadline} onChange={(e) => setEditData({ ...editData, deadline: e.target.value })} className="border p-2 rounded flex-1 bg-slate-800 text-white" />
+                  <input type="text" value={editData.name} onChange={e => setEditData({...editData, name:e.target.value})} className="border p-2 rounded flex-1 bg-slate-800 text-white"/>
+                  <input type="number" value={editData.target} onChange={e => setEditData({...editData, target:e.target.value})} className="border p-2 rounded flex-1 bg-slate-800 text-white"/>
+                  <input type="date" value={editData.deadline} onChange={e => setEditData({...editData, deadline:e.target.value})} className="border p-2 rounded flex-1 bg-slate-800 text-white"/>
                 </div>
                 <div className="flex gap-3">
-                  <button
-                    onClick={() => saveEdit(goal._id)}
-                    disabled={saving}
-                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-60"
-                  >
-                    {saving ? "Saving..." : "💾 Save"}
-                  </button>
+                  <button onClick={()=>saveEdit(goal._id)} disabled={saving} className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-60">{saving ? "Saving..." : "💾 Save"}</button>
                   <button onClick={cancelEdit} className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">✖ Cancel</button>
                 </div>
               </>
@@ -170,17 +169,9 @@ function Goals() {
                 <p>{canAchieve ? "✅ You can achieve this goal on time!" : "⚠️ Not enough savings."}</p>
 
                 <div className="flex gap-3 mt-4">
-                  {!goal.completed && (
-                    <button onClick={() => completeGoal(goal._id)} className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">
-                      ✅ Mark Completed
-                    </button>
-                  )}
-                  <button onClick={() => startEdit(goal)} className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">
-                    ✏️ Edit
-                  </button>
-                  <button onClick={() => deleteGoal(goal._id)} className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">
-                    🗑 Delete
-                  </button>
+                  {!goal.completed && <button onClick={()=>completeGoal(goal._id)} className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">✅ Mark Completed</button>}
+                  <button onClick={()=>startEdit(goal)} className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">✏️ Edit</button>
+                  <button onClick={()=>deleteGoal(goal._id)} className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">🗑 Delete</button>
                 </div>
               </>
             )}
