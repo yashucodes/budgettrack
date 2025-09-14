@@ -46,6 +46,15 @@ function Insight() {
   const monthlyBurn = expense > 0 ? expense / 30 : 0;
   const daysLeft = balance > 0 && monthlyBurn > 0 ? Math.floor(balance / monthlyBurn) : 0;
 
+  // Tooltip style
+  const tooltipStyle = {
+    backgroundColor: "rgba(15, 23, 42, 0.9)",
+    border: "1px solid #3B82F6",
+    borderRadius: "8px",
+    color: "#fff",
+    fontSize: "14px",
+  };
+
   return (
     <div className="p-6 min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
       <Link to="/">
@@ -124,7 +133,11 @@ function Insight() {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ background: "#0f172a", color: "#fff" }} />
+              <Tooltip 
+                contentStyle={tooltipStyle} 
+                itemStyle={{ color: "#fff" }} 
+                cursor={{ fill: "rgba(59, 130, 246, 0.1)" }}
+              />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -138,7 +151,11 @@ function Insight() {
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis dataKey="name" stroke="#E5E7EB" />
               <YAxis stroke="#E5E7EB" />
-              <Tooltip contentStyle={{ background: "#0f172a", color: "#fff" }} />
+              <Tooltip 
+                contentStyle={tooltipStyle} 
+                itemStyle={{ color: "#fff" }} 
+                cursor={{ fill: "rgba(59, 130, 246, 0.1)" }}
+              />
               <Bar dataKey="value" fill="#3B82F6" />
             </BarChart>
           </ResponsiveContainer>
