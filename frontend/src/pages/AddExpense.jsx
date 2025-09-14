@@ -33,7 +33,7 @@ function AddExpense() {
       title,
       amount: numericAmount,
       type,
-      date: new Date().toLocaleString(),
+      date: new Date(),
     };
 
     try {
