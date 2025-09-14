@@ -12,7 +12,10 @@ import {
   Line,
   XAxis,
   YAxis,
-  CartesianGrid
+  CartesianGrid,
+  ResponsiveContainer,
+  BarChart,
+  Bar
 } from "recharts";
 
 function Dashboard() {
