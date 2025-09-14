@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect, useMemo } from "react";
+// src/context/BudgetContext.js
+import React, { createContext, useState, useMemo, useEffect } from "react";
 import {
   getExpenses,
   addExpense,
@@ -17,40 +18,40 @@ export const BudgetProvider = ({ children }) => {
   const [goals, setGoals] = useState([]);
   const [notes, setNotes] = useState([]);
 
-  // Load transactions from backend on mount
+  // ---------------------- Fetch Data on Mount ----------------------
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchExpenses = async () => {
       try {
         const res = await getExpenses();
-        // assume res.data is array of expense objects with _id
+        const data = res.data || [];
         setTransactions(
-          res.data.map((t) => ({
+          data.map((t) => ({
             ...t,
-            // ensure amount is number
             amount: Number(t.amount),
+            date: t.date
+              ? new Date(t.date).toISOString()
+              : new Date().toISOString(),
           }))
         );
       } catch (err) {
         console.error("Error fetching expenses:", err);
       }
     };
-    fetchData();
-  }, []);
 
-  // Load notes from backend
-  useEffect(() => {
     const fetchNotes = async () => {
       try {
         const res = await getNotes();
-        setNotes(res.data);
+        setNotes(res.data || []);
       } catch (err) {
         console.error("Failed to fetch notes:", err);
       }
     };
+
+    fetchExpenses();
     fetchNotes();
   }, []);
 
-  // Add transaction (saves to backend and updates state)
+  // ---------------------- Transactions ----------------------
   const addTransaction = async (t) => {
     const payload = {
       title: t.title || "",
@@ -60,47 +61,83 @@ export const BudgetProvider = ({ children }) => {
     };
 
     try {
-      const res = await addExpense(payload); // backend returns saved object with _id
-      setTransactions((prev) => [{ ...res.data, amount: Number(res.data.amount) }, ...prev]);
+      const res = await addExpense(payload);
+      const saved = res.data || payload;
+      setTransactions((prev) => [
+        {
+          ...saved,
+          amount: Number(saved.amount),
+          date: saved.date
+            ? new Date(saved.date).toISOString()
+            : new Date().toISOString(),
+        },
+        ...prev,
+      ]);
     } catch (err) {
       console.error("Failed to add transaction:", err);
-      // fallback: optimistic add locally (no _id)
-      setTransactions((prev) => [{ ...payload, _id: Date.now().toString() }, ...prev]);
+      setTransactions((prev) => [
+        {
+          ...payload,
+          _id: Date.now().toString(),
+          date: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
     }
   };
 
-  // Update transaction (PUT) — returns updated transaction in res.data
   const updateTransaction = async (id, updated) => {
+    const payload = {
+      ...updated,
+      amount: Number(updated.amount),
+      date: updated.date || new Date(),
+    };
+
     try {
-      const res = await updateExpense(id, updated);
+      const res = await updateExpense(id, payload);
+      const saved = res.data || payload;
       setTransactions((prev) =>
-        prev.map((t) => ((t._id || t.id) === id ? { ...res.data, amount: Number(res.data.amount) } : t))
+        prev.map((t) =>
+          (t._id || t.id) === id
+            ? {
+                ...saved,
+                amount: Number(saved.amount),
+                date: saved.date
+                  ? new Date(saved.date).toISOString()
+                  : new Date().toISOString(),
+              }
+            : t
+        )
       );
-      return res.data;
+      return saved;
     } catch (err) {
       console.error("Failed to update transaction:", err);
-      // fallback: update locally
       setTransactions((prev) =>
-        prev.map((t) => ((t._id || t.id) === id ? { ...t, ...updated } : t))
+        prev.map((t) =>
+          (t._id || t.id) === id
+            ? { ...t, ...payload, date: new Date().toISOString() }
+            : t
+        )
       );
       throw err;
     }
   };
 
-  // Delete transaction (DELETE)
   const deleteTransaction = async (id) => {
     try {
       await deleteExpense(id);
-      setTransactions((prev) => prev.filter((t) => (t._id || t.id) !== id));
+      setTransactions((prev) =>
+        prev.filter((t) => (t._id || t.id) !== id)
+      );
     } catch (err) {
       console.error("Failed to delete transaction:", err);
-      // fallback: remove locally
-      setTransactions((prev) => prev.filter((t) => (t._id || t.id) !== id));
-      throw err;
+      setTransactions((prev) =>
+        prev.filter((t) => (t._id || t.id) !== id)
+      );
     }
   };
 
-  // Notes functions
+  // ---------------------- Notes ----------------------
   const addNote = async (note) => {
     try {
       const res = await addNoteAPI(note);
@@ -121,14 +158,14 @@ export const BudgetProvider = ({ children }) => {
     }
   };
 
-  // Goals
+  // ---------------------- Goals ----------------------
   const addGoal = (name, target) => {
     if (!name || !target) return;
     const g = { id: Date.now(), name, target: Number(target), progress: 0 };
     setGoals((prev) => [g, ...prev]);
   };
 
-  // Totals
+  // ---------------------- Totals ----------------------
   const totalIncome = useMemo(
     () =>
       transactions
@@ -145,13 +182,20 @@ export const BudgetProvider = ({ children }) => {
     [transactions]
   );
 
-  const moneyLeft = Math.max(budget + totalIncome - totalExpense, 0);
+  const moneyLeft = Math.max(
+    Number(budget) + totalIncome - totalExpense,
+    0
+  );
 
   const updatedGoals = goals.map((g) => ({
     ...g,
-    progress: Math.min(100, Math.round(((totalIncome - totalExpense) / (g.target || 1)) * 100)),
+    progress: Math.min(
+      100,
+      Math.round(((totalIncome - totalExpense) / (g.target || 1)) * 100)
+    ),
   }));
 
+  // ---------------------- Context Value ----------------------
   return (
     <BudgetContext.Provider
       value={{
