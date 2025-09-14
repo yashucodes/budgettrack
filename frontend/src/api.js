@@ -5,8 +5,12 @@ const BASE_URL = "http://localhost:5000/api";
 // ----------------------
 // Expenses
 // ----------------------
+
 export const getExpenses = () => axios.get(`${BASE_URL}/expenses`);
 export const addExpense = (expense) => axios.post(`${BASE_URL}/expenses`, expense);
+export const updateExpense = (id, updatedData) =>
+  axios.put(`${BASE_URL}/expenses/${id}`, updatedData);
+export const deleteExpense = (id) => axios.delete(`${BASE_URL}/expenses/${id}`);
 
 // ----------------------
 // Notes (QuickNotes)

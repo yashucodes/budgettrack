@@ -25,4 +25,31 @@ router.get("/", async (req, res) => {
   }
 });
 
+// UPDATE expense by id
+router.put("/:id", async (req, res) => {
+  try {
+    const updated = await Expense.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    if (!updated) return res.status(404).json({ error: "Expense not found" });
+    res.json(updated);
+  } catch (err) {
+    console.error("Error updating expense:", err);
+    res.status(500).json({ error: "Failed to update expense" });
+  }
+});
+
+// DELETE expense by id
+router.delete("/:id", async (req, res) => {
+  try {
+    const deleted = await Expense.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Expense not found" });
+    res.json({ message: "Expense deleted", id: deleted._id });
+  } catch (err) {
+    console.error("Error deleting expense:", err);
+    res.status(500).json({ error: "Failed to delete expense" });
+  }
+});
+
 module.exports = router;

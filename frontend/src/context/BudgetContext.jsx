@@ -1,5 +1,13 @@
 import React, { createContext, useState, useEffect, useMemo } from "react";
-import { getExpenses, addExpense, getNotes, addNoteAPI, deleteNoteAPI } from "../api";
+import {
+  getExpenses,
+  addExpense,
+  updateExpense,
+  deleteExpense,
+  getNotes,
+  addNoteAPI,
+  deleteNoteAPI,
+} from "../api";
 
 export const BudgetContext = createContext();
 
@@ -9,20 +17,17 @@ export const BudgetProvider = ({ children }) => {
   const [goals, setGoals] = useState([]);
   const [notes, setNotes] = useState([]);
 
-  // -----------------------
-  // Load transactions
-  // -----------------------
+  // Load transactions from backend on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await getExpenses();
+        // assume res.data is array of expense objects with _id
         setTransactions(
           res.data.map((t) => ({
-            id: t._id,
-            title: t.title,
+            ...t,
+            // ensure amount is number
             amount: Number(t.amount),
-            type: t.type,
-            date: t.date,
           }))
         );
       } catch (err) {
@@ -32,9 +37,7 @@ export const BudgetProvider = ({ children }) => {
     fetchData();
   }, []);
 
-  // -----------------------
-  // Load notes
-  // -----------------------
+  // Load notes from backend
   useEffect(() => {
     const fetchNotes = async () => {
       try {
@@ -47,65 +50,85 @@ export const BudgetProvider = ({ children }) => {
     fetchNotes();
   }, []);
 
-  // -----------------------
-  // Transactions
-  // -----------------------
+  // Add transaction (saves to backend and updates state)
   const addTransaction = async (t) => {
-    const newTransaction = {
-      id: t.id || Date.now(),
+    const payload = {
       title: t.title || "",
       amount: Number(t.amount),
       type: t.type || "expense",
-      date: t.date || new Date().toLocaleString(),
+      date: t.date || new Date(),
     };
 
     try {
-      const res = await addExpense(newTransaction);
-      setTransactions((prev) => [
-        { id: res.data._id, ...res.data },
-        ...prev,
-      ]);
+      const res = await addExpense(payload); // backend returns saved object with _id
+      setTransactions((prev) => [{ ...res.data, amount: Number(res.data.amount) }, ...prev]);
     } catch (err) {
       console.error("Failed to add transaction:", err);
-      setTransactions((prev) => [newTransaction, ...prev]); // fallback
+      // fallback: optimistic add locally (no _id)
+      setTransactions((prev) => [{ ...payload, _id: Date.now().toString() }, ...prev]);
     }
   };
 
-  // -----------------------
-  // Notes
-  // -----------------------
+  // Update transaction (PUT) — returns updated transaction in res.data
+  const updateTransaction = async (id, updated) => {
+    try {
+      const res = await updateExpense(id, updated);
+      setTransactions((prev) =>
+        prev.map((t) => ((t._id || t.id) === id ? { ...res.data, amount: Number(res.data.amount) } : t))
+      );
+      return res.data;
+    } catch (err) {
+      console.error("Failed to update transaction:", err);
+      // fallback: update locally
+      setTransactions((prev) =>
+        prev.map((t) => ((t._id || t.id) === id ? { ...t, ...updated } : t))
+      );
+      throw err;
+    }
+  };
+
+  // Delete transaction (DELETE)
+  const deleteTransaction = async (id) => {
+    try {
+      await deleteExpense(id);
+      setTransactions((prev) => prev.filter((t) => (t._id || t.id) !== id));
+    } catch (err) {
+      console.error("Failed to delete transaction:", err);
+      // fallback: remove locally
+      setTransactions((prev) => prev.filter((t) => (t._id || t.id) !== id));
+      throw err;
+    }
+  };
+
+  // Notes functions
   const addNote = async (note) => {
     try {
       const res = await addNoteAPI(note);
       setNotes((prev) => [res.data, ...prev]);
     } catch (err) {
       console.error("Failed to add note:", err);
-      setNotes((prev) => [note, ...prev]);
+      setNotes((prev) => [{ ...note, _id: Date.now().toString() }, ...prev]);
     }
   };
 
   const deleteNote = async (id) => {
     try {
       await deleteNoteAPI(id);
-      setNotes((prev) => prev.filter((n) => n._id !== id && n.id !== id));
+      setNotes((prev) => prev.filter((n) => (n._id || n.id) !== id));
     } catch (err) {
       console.error("Failed to delete note:", err);
-      setNotes((prev) => prev.filter((n) => n.id !== id));
+      setNotes((prev) => prev.filter((n) => (n._id || n.id) !== id));
     }
   };
 
-  // -----------------------
   // Goals
-  // -----------------------
   const addGoal = (name, target) => {
     if (!name || !target) return;
     const g = { id: Date.now(), name, target: Number(target), progress: 0 };
     setGoals((prev) => [g, ...prev]);
   };
 
-  // -----------------------
   // Totals
-  // -----------------------
   const totalIncome = useMemo(
     () =>
       transactions
@@ -126,10 +149,7 @@ export const BudgetProvider = ({ children }) => {
 
   const updatedGoals = goals.map((g) => ({
     ...g,
-    progress: Math.min(
-      100,
-      Math.round(((totalIncome - totalExpense) / (g.target || 1)) * 100)
-    ),
+    progress: Math.min(100, Math.round(((totalIncome - totalExpense) / (g.target || 1)) * 100)),
   }));
 
   return (
@@ -137,6 +157,8 @@ export const BudgetProvider = ({ children }) => {
       value={{
         transactions,
         addTransaction,
+        updateTransaction,
+        deleteTransaction,
         totalIncome,
         totalExpense,
         moneyLeft,
@@ -153,4 +175,3 @@ export const BudgetProvider = ({ children }) => {
     </BudgetContext.Provider>
   );
 };
-export default BudgetContext;
