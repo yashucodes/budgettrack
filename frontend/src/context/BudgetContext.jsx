@@ -4,7 +4,8 @@ import axios from "axios";
 
 export const BudgetContext = createContext();
 
-const API_URL = "http://localhost:5000/api/transactions";
+// Use relative URL for production, localhost for development
+const API_URL = process.env.NODE_ENV === 'production' ? '/api/transactions' : 'http://localhost:5000/api/transactions';
 
 export const BudgetProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);

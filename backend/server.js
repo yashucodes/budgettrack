@@ -10,6 +10,7 @@ require('dotenv').config();
 const express = require('express');       // Web framework for API/server
 const mongoose = require('mongoose');     // MongoDB connection and models
 const cors = require('cors');             // Allows frontend to talk to backend
+const path = require('path');             // For serving static files
 const OpenAI = require('openai'); // OpenAI SDK
 
 // ----------------------
@@ -54,6 +55,12 @@ mongoose.connect(uri, {
 // Load the Expense model
 // ----------------------
 const Expense = require('./models/Expense'); // Represents the "expenses" collection
+
+// ----------------------
+// Serve static files from React build
+// ----------------------
+// Serve static files from the React app build folder
+app.use(express.static(path.join(__dirname, '../frontend/build')));
 
 // ----------------------
 // API Routes
@@ -132,6 +139,13 @@ app.post('/api/ai-summary', async (req, res) => {
     console.error('OpenAI error', err);
     res.status(500).json({ error: 'OpenAI request failed' });
   }
+});
+
+// ----------------------
+// Catch-all handler: send back React's index.html file for any non-API routes
+// ----------------------
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
 });
 
 // ----------------------
