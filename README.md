@@ -223,12 +223,66 @@ OPENAI_API_KEY=sk-your-api-key-here
 
 ## 🚀 Deployment
 
-### Backend Deployment (Heroku/Railway/etc.)
+### Vercel Deployment (Recommended)
+
+This project is configured for easy deployment on Vercel with separate deployments for frontend and backend.
+
+#### Backend Deployment on Vercel
+
+1. **Push your code to GitHub**
+```bash
+git add .
+git commit -m "Add Vercel configuration"
+git push origin main
+```
+
+2. **Deploy on Vercel**
+   - Go to [vercel.com](https://vercel.com) and sign in
+   - Click "New Project" and import your GitHub repository
+   - Select the `backend` folder as the root directory
+   - Set the following environment variables in Vercel dashboard:
+     ```
+     MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/budgettrack
+     OPENAI_API_KEY=sk-your-openai-api-key-here
+     NODE_ENV=production
+     ```
+   - Deploy!
+
+#### Frontend Deployment on Vercel
+
+1. **Create a new Vercel project** for the frontend
+   - Import the same GitHub repository
+   - Select the `frontend` folder as the root directory
+   - Set the following environment variables:
+     ```
+     REACT_APP_API_URL=https://your-backend-url.vercel.app
+     REACT_APP_ENVIRONMENT=production
+     ```
+   - Replace `your-backend-url` with your actual backend Vercel URL
+   - Deploy!
+
+#### Alternative: Single Vercel Deployment
+
+You can also deploy both as separate projects or use Vercel's monorepo support:
+
+```bash
+# Deploy backend
+cd backend
+vercel --prod
+
+# Deploy frontend  
+cd ../frontend
+vercel --prod
+```
+
+### Other Deployment Options
+
+#### Backend Deployment (Heroku/Railway/etc.)
 1. Set environment variables in your hosting platform
 2. Ensure MongoDB connection string is configured
 3. Deploy using `npm start`
 
-### Frontend Deployment (Netlify/Vercel)
+#### Frontend Deployment (Netlify/Vercel)
 1. Build the project: `npm run build`
 2. Deploy the `build` folder
 3. Update API URLs in production
