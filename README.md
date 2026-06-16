@@ -1,12 +1,11 @@
 # 💰 BudgetTrack
 
-**A modern budgeting app for students & young adults to track income and expenses with AI-driven personalized insights to save more and stop overspending.**
+**A modern budgeting app for students & young adults to track income and expenses with personalized insights to save more and stop overspending.**
 
 ![BudgetTrack](https://img.shields.io/badge/Status-Active-brightgreen)
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB-green)
 ![React](https://img.shields.io/badge/Frontend-React-blue)
 ![Node.js](https://img.shields.io/badge/Backend-Node.js-green)
-![OpenAI](https://img.shields.io/badge/AI-OpenAI-orange)
 
 ## 🌟 Features
 
@@ -28,10 +27,10 @@
 - **Goal Management**: Create, update, and mark goals as completed
 - **Deadline Alerts**: Keep track of important financial milestones
 
-### 🤖 **AI-Powered Insights**
-- **Smart Analysis**: Get personalized spending insights using OpenAI GPT-4
+### 🤖 **Personalized Insights**
+- **Smart Analysis**: Get personalized spending insights
 - **Spending Patterns**: Identify areas where you're overspending (>30% in any category)
-- **Custom AI Summaries**: Generate detailed financial reports and recommendations
+- **Custom AI Summaries**: Get detailed financial reports and recommendations
 - **Behavioral Tips**: Receive actionable advice to improve your financial habits
 
 ### 📝 **Quick Notes**
@@ -56,7 +55,6 @@
 **Backend (Node.js/Express):**
 - Express.js REST API
 - MongoDB with Mongoose ODM
-- OpenAI integration for AI insights
 - CORS enabled for frontend communication
 - Helmet for security
 
@@ -70,7 +68,6 @@
 ### Prerequisites
 - Node.js (v14 or higher)
 - MongoDB (local or Atlas)
-- OpenAI API key (optional for AI features)
 
 ### Installation
 
@@ -158,10 +155,10 @@ The backend API will be running on `http://localhost:5000`
 3. Track progress and mark goals as completed
 
 ### Getting AI Insights
-1. Visit "AI Insights" page
+1. Visit "Insights" page
 2. View automated spending analysis
 3. Get personalized recommendations for better financial habits
-4. Use the AI summary feature for detailed reports
+4. Use the summary feature for detailed reports
 
 ## 🛠️ Development
 
